@@ -1,0 +1,44 @@
+loadEventsFromStorage()
+function with to connect your dashboard to Google Sheets:
+function loadEventsFromStorage() {
+    // Replace with your Google Sheet's published URL (the one from "Publish to web")
+    const sheetURL = 'YOUR_PUBLISHED_SHEET_URL_HERE';
+    const sheetID = sheetURL.split('/')[5]; // Extract the sheet ID from the URL
+    const sheetName = 'Sheet1'; // Change if your sheet has a different name
+    
+    // Construct the API URL to fetch the JSON data
+    const apiURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${sheetName}?alt=json&key=YOUR_API_KEY`;
+    
+    // Show loading overlay
+    loadingOverlay.style.display = 'flex';
+    
+    // Fetch data from Google Sheets
+    fetch(apiURL)
+        .then(response => response.json())
+        .then(data => {
+            // Process the data
+            const rows = data.values;
+            const headers = rows[0];
+            
+            // Convert rows to objects
+            eventsData = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const event = {};
+                
+                for (let j = 0; j < headers.length; j++) {
+                    event[headers[j]] = row[j];
+                }
+                
+                // Convert numeric values
+                event.id = parseInt(event.id);
+                event.year = parseInt(event.year);
+                event.attendees = parseInt(event.attendees);
+                event.featured = event.featured === 'TRUE';
+                
+                eventsData.push(event);
+            }
+            
+            // Update the dashboard
+            renderEventsList();
+            renderFeaturedEvents();
