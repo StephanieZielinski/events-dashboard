@@ -1,4 +1,92 @@
-loadEventsFromStorage()
+function loadEventsFromStorage() {
+    // Your Google Sheet's published URL from "Publish to web"
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtvw2gXvZGuUazS-P29a6oNM1htV2pKPF635O9HaNSOHd7V1AqzHtFhNK8CsjunkMnUx0rq3vpx7mZ/pubhtml';
+    
+    // Extract the sheet ID from the URL
+    const sheetID = sheetURL.split('/')[5]; 
+    
+    // Your sheet name (usually "Sheet1" unless you renamed it)
+    const sheetName = 'Sheet1'; 
+    
+    // Your Google API Key from Google Cloud Console
+    const apiKey = 'YOUR_API_KEY_HERE';
+    
+    // Construct the API URL
+    const apiURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${sheetName}?alt=json&key=${apiKey}`;
+    
+    // Show loading overlay
+    loadingOverlay.style.display = 'flex';
+    
+    // Fetch data from Google Sheets
+    fetch(apiURL)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Process the data
+            const rows = data.values;
+            if (!rows || rows.length === 0) {
+                throw new Error('No data found in sheet');
+            }
+            
+            const headers = rows[0];
+            
+            // Convert rows to objects
+            eventsData = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.length === 0) continue; // Skip empty rows
+                
+                const event = {};
+                
+                for (let j = 0; j < headers.length; j++) {
+                    if (j < row.length) {
+                        event[headers[j]] = row[j];
+                    } else {
+                        event[headers[j]] = ''; // Handle missing values
+                    }
+                }
+                
+                // Convert numeric values
+                event.id = parseInt(event.id) || 0;
+                event.year = parseInt(event.year) || 2025;
+                event.attendees = parseInt(event.attendees) || 0;
+                event.featured = (event.featured === 'TRUE' || event.featured === 'true');
+                
+                eventsData.push(event);
+            }
+            
+            console.log('Loaded ' + eventsData.length + ' events from Google Sheets');
+            
+            // Update the dashboard
+            renderEventsList();
+            renderFeaturedEvents();
+            updateStats();
+            checkEmptyStates();
+            
+            // Hide loading overlay
+            loadingOverlay.style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error fetching data from Google Sheets:', error);
+            loadingOverlay.style.display = 'none';
+            showToast('Error loading data from Google Sheets. Using local data instead.', true);
+            
+            // Fall back to local storage if API fails
+            const storedEvents = localStorage.getItem('eventsData');
+            if (storedEvents) {
+                eventsData = JSON.parse(storedEvents);
+            }
+            
+            renderEventsList();
+            renderFeaturedEvents();
+            updateStats();
+            checkEmptyStates();
+        });
+}
 function with to connect your dashboard to Google Sheets:
 function loadEventsFromStorage() {
     // Replace with your Google Sheet's published URL (the one from "Publish to web")
